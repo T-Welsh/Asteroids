@@ -61,6 +61,28 @@ class Projectile {
     }
 }
 
+class Asteroid {
+    constructor({position, velocity}) {
+        this.position = position;
+        this.velocity = velocity;
+        this.radius = 50 * Math.random() + 10;
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2, false);
+        ctx.closePath();
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+    }
+
+    update(){
+        this.draw();
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+    }
+}
+
 
 
 const player = new Player({
@@ -89,11 +111,73 @@ const keys = {
     }
 }
 
-const SPEED = 1.6;
+const SPEED = 2.5;
+const REVERSE_SPEED = -0.5;
 const ROTATIONAL_SPEED = 0.05;
-const FRICTION = 0.99;
+const FRICTION = 0.999;
 const PROJECTILE_THRUST = 3;
+
 const projectiles = [];
+const asteroids = [];
+
+window.setInterval( () => {
+
+    const asteroidSpawnIndex = Math.floor(Math.random() * 5);
+
+    switch (asteroidSpawnIndex) {
+        case 1:
+            asteroids.push(new Asteroid({
+                position: {
+                    x: -60,
+                    y: -60
+                },
+                velocity: {
+                    x: 1 * Math.random(),
+                    y: 1 * Math.random()
+                }
+            }))
+            break;
+        case 2:
+            asteroids.push(new Asteroid({
+                position: {
+                    x: canvas.width + 60,
+                    y: canvas.height + 60
+                },
+                velocity: {
+                    x: -1 * Math.random(),
+                    y: -1 * Math.random()
+                }
+            }))
+            break;
+        case 3:
+            asteroids.push(new Asteroid({
+                position: {
+                    x: canvas.width,
+                    y: -60
+                },
+                velocity: {
+                    x: -1 * Math.random(),
+                    y: 1 * Math.random()
+                }
+            }))
+            break;
+        case 4:
+            asteroids.push(new Asteroid({
+                position: {
+                    x: -60,
+                    y: canvas.height
+                },
+                velocity: {
+                    x: 1 * Math.random(),
+                    y: -1 * Math.random()
+                }
+            }))
+            break;
+    
+        default:
+            break;
+    }
+}, 2000);
 
 function animate() {
     window.requestAnimationFrame(animate);
@@ -115,6 +199,20 @@ function animate() {
         }
     }
 
+    //loop through asteroids array from back to front. this stops flashing.
+    for(let i = asteroids.length - 1; i >= 0; i--) {
+        const asteroid = asteroids[i];
+        asteroid.update();
+        
+        //Clean up asteroids off screen
+        if( asteroid.position.x + asteroid.radius < - 60 ||
+            asteroid.position.x - asteroid.radius > canvas.width + 60 ||
+            asteroid.position.y - asteroid.radius > canvas.height + 60||
+            asteroid.position.y + asteroid.radius < -60) {
+            asteroids.splice(i, 1);
+        }
+    }
+
     if (keys.w.pressed) {
         player.velocity.x = Math.cos(player.rotation) * SPEED;
         player.velocity.y = Math.sin(player.rotation) * SPEED;
@@ -130,7 +228,8 @@ function animate() {
         player.rotation += ROTATIONAL_SPEED;
     }
     if (keys.s.pressed) {
-        //player.velocity.x = 1;
+        player.velocity.x = Math.cos(player.rotation) * REVERSE_SPEED;
+        player.velocity.y = Math.sin(player.rotation) * REVERSE_SPEED;
     }
 }
 
@@ -138,25 +237,28 @@ window.addEventListener('keydown', (event) => {
     switch (event.code) {
         case 'KeyW':
             keys.w.pressed = true;
+            console.log(player.velocity.x);
             break;
         case 'KeyA':
             keys.a.pressed = true;
             break;
         case 'KeyS':
             keys.s.pressed = true;
+            console.log(player.velocity.x);
             break;
         case 'KeyD':
             keys.d.pressed = true;
             break;
         case 'Space':
+            console.log(asteroids);
             projectiles.push(new Projectile({
                 position: {
                     x: player.position.x + Math.cos(player.rotation) * 30, // offset by player edge
                     y: player.position.y + Math.sin(player.rotation) * 30
                 },
                 velocity: {
-                    x: Math.cos(player.rotation) * PROJECTILE_THRUST/*(player.velocity.x + PROJECTILE_THRUST)*/,
-                    y: Math.sin(player.rotation) * PROJECTILE_THRUST/*(player.velocity.y + PROJECTILE_THRUST)*/
+                    x: (Math.cos(player.rotation) * PROJECTILE_THRUST) + player.velocity.x,
+                    y: (Math.sin(player.rotation) * PROJECTILE_THRUST) + player.velocity.y
                 }
             }));
             break;
